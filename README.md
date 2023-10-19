@@ -1,3 +1,3 @@
 # Expense-Tracker-web-app
 
-Author - Pranav, Giriraj
+Author - Chiluveru Pranav, Giriraj Singh
