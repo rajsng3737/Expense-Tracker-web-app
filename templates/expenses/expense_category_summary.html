@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Expense Category {{ period }} Summary</h1>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Total Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for category, total_amount in expense_category_data.items %}
+      <tr>
+        <td>{{ category }}</td>
+        <td>{{ total_amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>Total Expenses for {{ period }}: <strong>{{ total_expenses }}</strong></p>
+</div>
+{% endblock %}
