@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="bg-title text-center text-white p-2">Personal Information</h1>
+    <form class="mx-auto" style="max-width: 400px;">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="phone">Phone Number:</label>
+            <input type="tel" class="form-control" id="phone" name="phone" required pattern="[0-9]{10}">
+        </div>
+        <div class="form-group">
+            <label for="email">Email ID:</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="address">Address:</label>
+            <textarea class="form-control" id="address" name="address" rows="4" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="occupation">Occupation:</label>
+            <input type="text" class="form-control" id="occupation" name="occupation" required>
+        </div>
+        <div class="form-group">
+            <label for="income">Income:</label>
+            <input type="number" class="form-control" id="income" name="income" required>
+        </div>
+        <div class="form-group">
+            <label for="expenses">Monthly Expense Limit:</label>
+            <input type="number" class="form-control" id="expenses" name="expenses" required>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
