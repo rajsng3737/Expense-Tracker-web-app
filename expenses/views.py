@@ -19,7 +19,7 @@ def index(request):
     expenses = Expense.objects.filter(owner=request.user)
     paginator = Paginator(expenses, 5)
     page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)  # Use get_page directly
+    page_obj = paginator.get_page(page_number)
 
 
     context = {
@@ -27,6 +27,233 @@ def index(request):
         'page_obj': page_obj,
     }
     return render(request, 'expenses/index.html', context)
+
+
+@login_required(login_url='/accounts/login')
+def monthly_report(request):
+    if request.method == 'GET':
+        # Get the selected month from the request
+        selected_month = request.GET.get('selected_month', None)
+        
+        # Validate the selected_month (e.g., check for valid input)
+        if selected_month is not None:
+            try:
+                selected_month = int(selected_month)
+                if 1 <= selected_month <= 12:
+                    # Get the current year
+                    today = datetime.date.today()
+                    year = today.year
+
+                    # Calculate the first and last days of the selected month
+                    first_day = datetime.date(year, selected_month, 1)
+                    # Calculate the last day of the current month
+                    last_day = calendar.monthrange(year, selected_month)[1]
+
+                    # Fetch expenses for the selected month
+                    expenses = Expense.objects.filter(
+                        owner=request.user,
+                        date__range=[datetime.datetime(year, selected_month, 1), datetime.datetime(year, selected_month, last_day)]
+                    )
+
+                    finalrep = {}
+
+                    def get_category(expense):
+                        return expense.category
+
+                    category_list = list(set(map(get_category, expenses)))
+
+                    for category in category_list:
+                        filtered_by_category = expenses.filter(category=category)
+                        total_amount = sum(item.amount for item in filtered_by_category)
+                        finalrep[category] = total_amount
+
+                    # Create data for visualization
+                    categories = []
+                    amounts = []
+                    
+                    for key, value in finalrep.items():
+                        categories.append(key)
+                        amounts.append(value)
+
+                    # Create a pie chart
+                    plt.figure(figsize=(8, 8))
+                    plt.pie(amounts, labels=categories, autopct='%1.1f%%')
+                    plt.title(f'Spending by Category for {first_day.strftime("%B %Y")}')
+
+                    # Save the chart to a file-like object
+                    buffer = io.BytesIO()
+                    plt.savefig(buffer, format='png')
+                    buffer.seek(0)
+                    plt.close()
+
+                    # Encode the chart to base64
+                    chart = base64.b64encode(buffer.read()).decode()
+                    months = [{'value': month, 'label': datetime.date(1, month, 1).strftime("%B")} for month in range(1, 13)]
+                    context = {
+                        'chart': chart,
+                        'selected_month': selected_month,
+                        'months':months
+                    }
+
+                    return render(request, 'expenses/monthly_report.html', context)
+                else:
+                    return HttpResponse("Invalid month selected")
+            except ValueError:
+                return HttpResponse("Invalid month selected")
+    
+    # Default view when no month is selected
+    months = [{'value': month, 'label': datetime.date(1, month, 1).strftime("%B")} for month in range(1, 13)]
+
+    context = {
+        'months': months
+    }
+
+    return render(request, 'expenses/monthly_report.html', context)
+
+@login_required(login_url='/accounts/login')
+def monthwise_report(request):
+    # Get the current year
+    today = datetime.date.today()
+    year = today.year
+
+    # Fetch all expenses for the current year
+    start_date = datetime.date(year, 1, 1)
+    end_date = datetime.date(year, 12, 31)
+
+    expenses = Expense.objects.filter(
+        owner=request.user,
+        date__range=[start_date, end_date]
+    )
+
+    # Create a dictionary to store month-wise total expenses
+    month_expenses = {}
+
+    for month in range(1, 13):
+        # Calculate first and last day of the current month
+        first_day = datetime.date(year, month, 1)
+        # Calculate the last day of the current month
+        last_day = calendar.monthrange(year, month)[1]
+
+        # Fetch expenses for the current month
+        monthly_expenses = expenses.filter(
+            date__range=[datetime.datetime(year, month, 1), datetime.datetime(year, month, last_day)]
+        )
+
+
+        # Calculate the total expense for the current month
+        total_expense = sum(expense.amount for expense in monthly_expenses)
+        
+        # Store the total expense in the dictionary
+        month_expenses[month] = total_expense
+
+
+    # Convert month numbers to strings
+    months = [datetime.date(year, month, 1).strftime("%B") for month in range(1, 13)]
+
+    # Retrieve the total expenses for each month
+    total_expenses = [month_expenses.get(month, 0) for month in range(1, 13)]
+
+
+    # Create a bar graph
+    plt.figure(figsize=(12, 6)) 
+    plt.bar(months, total_expenses)
+    plt.xlabel('Month')
+    plt.ylabel('Total Expenses')
+    plt.title('Total Expenses by Month')
+
+    # Save the graph to a file-like object
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    plt.close()
+
+    # Encode the graph to base64
+    graph = base64.b64encode(buffer.read()).decode()
+
+    context = {
+        'graph': graph,
+        'months_expenses': month_expenses
+    }
+
+    return render(request, 'expenses/monthwise_report.html', context)
+    
+@login_required(login_url='/accounts/login')
+def daywise_expenses(request):
+    # Get the selected month from the request
+    if request.method == 'GET':
+        # Get the selected month from the request
+        selected_month_str = request.GET.get('selected_month', None)
+
+
+        # Validate the selected_month (e.g., check for valid input)
+        if selected_month_str is not None:
+            # Calculate the first and last day of the selected month
+            try:
+                selected_month = int(selected_month_str)
+                if 1 <= selected_month <= 12:
+                    # Get the current year
+                    today = datetime.date.today()
+                    year = today.year
+                    first_day = datetime.datetime(year, selected_month, 1)  # Convert to datetime
+                    last_day = datetime.datetime(year, selected_month, calendar.monthrange(year, selected_month)[1])  # Convert to datetime
+
+                    # Now you can use these datetime objects in the date__range query
+                    expenses = Expense.objects.filter(
+                        owner=request.user,
+                        date__range=[first_day, last_day]
+                    )
+
+                    # Create a dictionary to store day-wise total expenses
+                    daywise_expenses = {}
+
+                    for day in range(1, last_day.day + 1):
+                        current_date = datetime.date(year, selected_month, day)
+
+                        # Calculate the total expense for the current day
+                        day_expenses = expenses.filter(date=current_date)
+
+                        total_expense = sum(expense.amount for expense in day_expenses)
+
+                        # Store the total expense in the dictionary
+                        daywise_expenses[day] = total_expense
+
+                    # Create a bar graph
+                    plt.figure(figsize=(12, 6))
+                    plt.bar(daywise_expenses.keys(), daywise_expenses.values())
+                    plt.xlabel('Day')
+                    plt.ylabel('Total Expenses')
+                    plt.title(f'Total Expenses for {first_day.strftime("%B")} {year}')
+
+                    # Save the graph to a file-like object
+                    buffer = io.BytesIO()
+                    plt.savefig(buffer, format='png')
+                    buffer.seek(0)
+                    plt.close()
+
+                    # Encode the graph to base64
+                    graph = base64.b64encode(buffer.read()).decode()
+                    # Default view when no month is selected
+                    months = [{'value': month, 'label': datetime.date(1, month, 1).strftime("%B")} for month in range(1, 13)]
+                    context = {
+                        'graph': graph,
+                        'day_expenses': daywise_expenses,
+                        'selected_month': selected_month,
+                        'months': months
+                    }
+
+                    return render(request, 'expenses/daywise_expenses.html', context)
+                else:
+                    return HttpResponse("Invalid month selected")
+            except ValueError:
+                return HttpResponse("Invalid month selected")
+    
+    # Default view when no month is selected
+    months = [{'value': month, 'label': datetime.date(1, month, 1).strftime("%B")} for month in range(1, 13)]
+    context = {
+        'months': months
+    }
+    return render(request, 'expenses/daywise_expenses.html', context)
+
 
 @login_required(login_url='/accounts/login')
 def add_expense(request):
@@ -157,3 +384,7 @@ def expense_category_summary(request, period):
 
     return render(request, 'expenses/expense_category_summary.html', context)
 
+@login_required(login_url='/accounts/login')
+def settings(request):
+    return render(request, 'settings.html')
+    
