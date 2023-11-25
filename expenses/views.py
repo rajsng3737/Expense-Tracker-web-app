@@ -14,6 +14,7 @@ import datetime
 import json
 import calendar
 
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def index(request):
     expenses = Expense.objects.filter(owner=request.user)
@@ -28,7 +29,7 @@ def index(request):
     }
     return render(request, 'expenses/index.html', context)
 
-
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def monthly_report(request):
     if request.method == 'GET':
@@ -109,7 +110,8 @@ def monthly_report(request):
     }
 
     return render(request, 'expenses/monthly_report.html', context)
-
+    
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def monthwise_report(request):
     # Get the current year
@@ -177,6 +179,7 @@ def monthwise_report(request):
 
     return render(request, 'expenses/monthwise_report.html', context)
     
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def daywise_expenses(request):
     # Get the selected month from the request
@@ -255,94 +258,139 @@ def daywise_expenses(request):
     return render(request, 'expenses/daywise_expenses.html', context)
 
 
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def add_expense(request):
+    # Retrieve all categories from the database
     categories = Category.objects.all()
+
+    # Prepare the context data to be passed to the template
     context = {
         'categories': categories,
         'values': request.POST
     }
+
+    # If the request method is GET, render the template for adding an expense with the provided context
     if request.method == 'GET':
         return render(request, 'expenses/add_expense.html', context)
 
+    # If the request method is POST, process the form data
     if request.method == 'POST':
+        # Retrieve the amount from the form data
         amount = request.POST['amount']
 
+        # Check if the amount is not provided, display an error message
         if not amount:
             messages.error(request, 'Amount is required')
             return render(request, 'expenses/add_expense.html', context)
+
+        # Retrieve other form data: description, date, and category
         description = request.POST['description']
-        date = request.POST['expense_date']
+        date = request.POST['date']
         category = request.POST['category']
 
+        # Check if description is not provided, display an error message
         if not description:
-            messages.error(request, 'description is required')
+            messages.error(request, 'Description is required')
             return render(request, 'expenses/add_expense.html', context)
 
+        # Check if date is not provided, display an error message
+        if not date:
+            messages.error(request, 'Date is required')
+            return render(request, 'expenses/add_expense.html', context)
+
+        # Create a new Expense object in the database with the provided data
         Expense.objects.create(owner=request.user, amount=amount, date=date,
                                category=category, description=description)
+        
+        # Display a success message
         messages.success(request, 'Expense saved successfully')
 
+        # Redirect to the 'expenses' page after successfully adding an expense
         return redirect('expenses')
 
-def search_expenses(request):
-    if request.method == 'POST':
-        search_str = json.loads(request.body).get('searchText')
-        expenses = Expense.objects.filter(
-            amount__istartswith=search_str, owner=request.user) | Expense.objects.filter(
-            date__istartswith=search_str, owner=request.user) | Expense.objects.filter(
-            description__icontains=search_str, owner=request.user) | Expense.objects.filter(
-            category__icontains=search_str, owner=request.user)
-        data = expenses.values()
-        return JsonResponse(list(data), safe=False)
 
 
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def expense_edit(request, id):
+    # Retrieve the Expense object from the database using the provided id
     expense = Expense.objects.get(pk=id)
+
+    # Retrieve all categories from the database
     categories = Category.objects.all()
+
+    # Prepare the context data to be passed to the template
     context = {
         'expense': expense,
-        'values': expense,
+        'values': expense, 
         'categories': categories
     }
+
+    # If the request method is GET, render the template for editing an expense with the provided context
     if request.method == 'GET':
         return render(request, 'expenses/edit_expense.html', context)
+
+    # If the request method is POST, process the form data
     if request.method == 'POST':
+        # Retrieve the amount from the form data
         amount = request.POST['amount']
 
+        # Check if the amount is not provided, display an error message
         if not amount:
             messages.error(request, 'Amount is required')
             return render(request, 'expenses/edit_expense.html', context)
+
+        # Retrieve other form data: description, date, and category
         description = request.POST['description']
         date = request.POST['expense_date']
         category = request.POST['category']
 
+        # Check if description is not provided, display an error message
         if not description:
-            messages.error(request, 'description is required')
+            messages.error(request, 'Description is required')
             return render(request, 'expenses/edit_expense.html', context)
 
+        # Update the Expense object with the new data
         expense.owner = request.user
         expense.amount = amount
-        expense. date = date
+        expense.date = date
         expense.category = category
         expense.description = description
 
+        # Save the updated expense object in the database
         expense.save()
-        messages.success(request, 'Expense updated  successfully')
 
+        # Display a success message
+        messages.success(request, 'Expense updated successfully')
+
+        # Redirect to the 'expenses' page after successfully updating an expense
         return redirect('expenses')
 
+
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def delete_expense(request, id):
+    # Retrieve the Expense object from the database using the provided id
     expense = Expense.objects.get(pk=id)
+
+    # Delete the expense from the database
     expense.delete()
+
+    # Display a success message
     messages.success(request, 'Expense removed')
+
+    # Redirect to the 'expenses' page after successfully deleting an expense
     return redirect('expenses')
 
+
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def expense_category_summary(request, period):
+    # Get the current date
     todays_date = datetime.date.today()
+
+    # Determine the start and end dates based on the specified period
     if period == 'day':
         start_date = todays_date
         end_date = todays_date
@@ -356,34 +404,49 @@ def expense_category_summary(request, period):
         # Handle an invalid period gracefully, you can redirect or show an error message.
         return HttpResponseBadRequest("Invalid period")
 
+    # Retrieve expenses from the database within the specified date range
     expenses = Expense.objects.filter(
         owner=request.user,
         date__gte=start_date,
         date__lte=end_date
     )
 
+    # Initialize variables for the final report and total expenses
     finalrep = {}
     total_expenses = 0
 
+    # Helper function to extract the category from an expense
     def get_category(expense):
         return expense.category
 
+    # Create a list of unique categories from the expenses
     category_list = list(set(map(get_category, expenses)))
 
+    # Calculate total expenses for each category
     for category in category_list:
+        # Filter expenses by category
         filtered_by_category = expenses.filter(category=category)
+
+        # Calculate the total amount for the category
         total_amount = sum(item.amount for item in filtered_by_category)
+
+        # Update the final report with the total amount for the category
         finalrep[category] = total_amount
+
+        # Update the total expenses
         total_expenses += total_amount
 
+    # Prepare the context data to be passed to the template
     context = {
         'expense_category_data': finalrep,
         'total_expenses': total_expenses,
         'period': period,
     }
 
+    # Render the template for displaying the expense category summary with the provided context
     return render(request, 'expenses/expense_category_summary.html', context)
 
+# Ensure that the user is logged in before accessing this view, redirect to the login page if not
 @login_required(login_url='/accounts/login')
 def settings(request):
     return render(request, 'settings.html')

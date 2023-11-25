@@ -46,9 +46,13 @@
           <input type="text" class="form-control form-control-sm" name="description" value="{{ values.description }}">
         </div>
 
-        <div class="form-group">
-          <label for="expense_date">Date of Expense</label>
-          <input type="date" class="form-control form-control-sm" name="expense_date">
+        <div class="form-group" onsubmit="return validateForm()">
+          <label for="date">Date of Expense</label>
+          <input type="date" class="form-control form-control-sm" name="date" id="expense_date">
+          <script>
+            document.getElementById('expense_date').setAttribute('max', new Date().toISOString().split('T')[0]);
+          </script>
+
         </div>
 
         <input type="submit" value="Submit" class="btn btn-primary btn-sm">
