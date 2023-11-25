@@ -9,7 +9,7 @@
         <div class="card-title py-3">
           <h4>Register for a Free Account</h4>
         </div>
-        <form action="{% url 'register' %}" method="post">
+        <form action="{% url 'register' %}" method="post" onsubmit="return validateForm()">
           {% csrf_token %}
           {% include 'partials/_messages.html' %}
           <div class="form-group">
@@ -49,14 +49,33 @@
               class="form-control form-control-sm"
               id="confirmPasswordField"
             />
+            <p id="passwordError" class="text-danger"></p>
           </div>
           <input type="submit" value="Register" class="btn btn-block btn-primary submit-btn" />
+          
         </form>
         <a href="{% url 'login' %}">Already have an account? Login here</a>
       </div>
     </div>
   </div>
   <div class="col-md-4"></div>
+
+  <script>
+    function validateForm() {
+      var password = document.getElementById("passwordField").value;
+      var confirmPassword = document.getElementById("confirmPasswordField").value;
+      var passwordError = document.getElementById("passwordError");
+
+      if (password !== confirmPassword) {
+        passwordError.innerHTML = "Passwords do not match!";
+        return false;
+      } else {
+        passwordError.innerHTML = "";
+        return true;
+      }
+    }
+  </script>
 </div>
 
 {% endblock content %}
+
